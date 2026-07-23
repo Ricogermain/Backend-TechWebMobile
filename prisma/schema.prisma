@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Utilisateur {
+  id           Int      @id @default(autoincrement())
+  nom          String
+  email        String   @unique
+  motDePasse   String
+  telephone    String?
+  role         Role     @default(CLIENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  commandes    Commande[]  @relation("ClientCommandes")
+  livraisons   Livraison[] @relation("LivreurLivraisons")
+
+  @@map("utilisateurs")
+}
+
+model Vehicule {
+  id          Int      @id @default(autoincrement())
+  marque      String
+  modele      String
+  annee       Int
+  prix        Decimal  @db.Decimal(10, 2)
+  imageUrl    String?
+  disponible  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  commandes   Commande[]
+
+  @@map("vehicules")
+}
+
+model Commande {
+  id                Int             @id @default(autoincrement())
+  idClient          Int
+  idVehicule        Int
+  adresseLivraison  String
+  dateCommande      DateTime        @default(now())
+  statut            StatutCommande  @default(EN_ATTENTE)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  client            Utilisateur     @relation("ClientCommandes", fields: [idClient], references: [id])
+  vehicule          Vehicule        @relation(fields: [idVehicule], references: [id])
+  livraison         Livraison?
+
+  @@map("commandes")
+}
+
+model Livraison {
+  id                  Int              @id @default(autoincrement())
+  idCommande          Int              @unique
+  idLivreur           Int?
+  statut              StatutLivraison  @default(PRISE_EN_CHARGE)
+  datePriseEnCharge   DateTime?
+  dateLivraison       DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  // Relations
+  commande            Commande         @relation(fields: [idCommande], references: [id])
+  livreur             Utilisateur?     @relation("LivreurLivraisons", fields: [idLivreur], references: [id])
+
+  @@map("livraisons")
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+  LIVREUR
+}
+
+enum StatutCommande {
+  EN_ATTENTE
+  CONFIRMEE
+  EN_LIVRAISON
+  LIVREE
+  ANNULEE
+}
+
+enum StatutLivraison {
+  PRISE_EN_CHARGE
+  EN_ROUTE
+  LIVREE
+}
