@@ -1,10 +1,11 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req} from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { BlacklistService } from './blacklist.service';
+import { Public } from './decorators/public.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -15,6 +16,7 @@ export class AuthController {
   ) {}
 
   @Post('login')
+  @Public()
   @ApiOperation({ summary: 'Connexion (email + mot de passe)' })
   @ApiBody({
     type: LoginDto,
@@ -29,7 +31,7 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
+  //@UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Déconnexion' })
   @ApiResponse({ status: 201, description: 'Déconnexion réussie' })
