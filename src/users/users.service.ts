@@ -99,4 +99,9 @@ export class UsersService {
             where: { id },
         });
     }
+
+    //Pour authentification seulement
+    async findEmailForAuth(email: string) {
+        return this.db.utilisateur.findUnique({ where: { email } });
+    }
 }
