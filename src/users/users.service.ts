@@ -90,7 +90,11 @@ export class UsersService {
         return new UserEntity(updated);
     }
 
-    remove(id: number): Promise<UserEntity> {
+    async remove(id: number): Promise<UserEntity> {
+        const existe = await this.db.utilisateur.findUnique({ where: { id } });
+        if (!existe) {
+            throw new NotFoundException('Utilisateur non trouvé');
+        }
         return this.db.utilisateur.delete({
             where: { id },
         });
