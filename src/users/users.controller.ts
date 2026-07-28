@@ -12,12 +12,13 @@ import {
   Query,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { FindUsersDto } from './dto/find-users.dto';
 import { SearchUsersDto } from './dto/search-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('users')
 @Controller('users')
@@ -26,6 +27,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @Public()
   @ApiOperation({ summary: "Inscription d'un utilisateur (rôle CLIENT par défaut)" })
   @ApiBody({
   type: CreateUserDto,
@@ -48,12 +50,14 @@ export class UsersController {
   }
 
   @Get()
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Lister les utilisateurs (filtrable par rôle)' })
   findAll(@Query() query: FindUsersDto) {
     return this.usersService.findAll(query.role);
   }
 
   @Get('recherche')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Recherche par nom, email ou téléphone' })
   @ApiQuery({ name: 'q', required: false, example: 'rico' })
   recherche(@Query() query: SearchUsersDto) {
@@ -61,6 +65,7 @@ export class UsersController {
   }
 
   @Get('email/:email')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Trouver un utilisateur par email' })
   @ApiParam({ name: 'email', example: 'rico@example.com' })
   @ApiResponse({ status: 404, description: 'Utilisateur non trouvé' })
@@ -73,6 +78,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Trouver un utilisateur par id' })
   @ApiParam({ name: 'id', example: 1 })
   @ApiResponse({ status: 404, description: 'Utilisateur non trouvé' })
@@ -85,6 +91,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Modifier le profil (nom, email, téléphone)' })
   @ApiParam({ name: 'id', example: 1 })
   @ApiBody({
@@ -107,6 +114,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Supprimer un utilisateur' })
   @ApiParam({ name: 'id', example: 1 })
   @ApiResponse({ status: 200, description: 'Utilisateur supprimé' })

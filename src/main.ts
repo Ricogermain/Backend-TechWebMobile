@@ -10,9 +10,9 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('API Gestion de commande et livraison de voiture')
-    .setDescription('API REST NestJS — projet ENI L3 GLBD')
+    .setDescription('API REST NestJS pour tech web avec Flutter')
     .setVersion('1.0')
-    .addBearerAuth() // pour tester les routes protégées par JWT plus tard
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
