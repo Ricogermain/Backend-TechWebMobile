@@ -100,7 +100,21 @@ export class UsersService {
         });
     }
 
-    //Pour authentification seulement
+    async updateRole(id: number, role: Role): Promise<UserEntity> {
+        const existe = await this.db.utilisateur.findUnique({ where: { id } });
+        if (!existe) {
+            throw new NotFoundException('Utilisateur non trouvé');
+        }
+
+        const updated = await this.db.utilisateur.update({
+            where: { id },
+            data: { role },
+        });
+
+        return new UserEntity(updated);
+    }
+
+    //Pour l'authentification seulement
     async findEmailForAuth(email: string) {
         return this.db.utilisateur.findUnique({ where: { email } });
     }
