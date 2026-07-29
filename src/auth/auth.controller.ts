@@ -6,6 +6,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { BlacklistService } from './blacklist.service';
 import { Public } from './decorators/public.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -17,6 +18,7 @@ export class AuthController {
 
   @Post('login')
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentatives par minute max
   @ApiOperation({ summary: 'Connexion (email + mot de passe)' })
   @ApiBody({
     type: LoginDto,
