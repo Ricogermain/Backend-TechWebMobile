@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Vehicule } from '@prisma/client';
 import { Transform } from 'class-transformer';
 
 export class VehiculeEntity {
@@ -22,6 +23,9 @@ export class VehiculeEntity {
   imageUrl: string | null;
 
   @ApiProperty()
+  stock: number;
+
+  @ApiProperty()
   disponible: boolean;
 
   @ApiProperty()
@@ -30,7 +34,16 @@ export class VehiculeEntity {
   @ApiProperty()
   updatedAt: Date;
 
-  constructor(partial: Partial<VehiculeEntity>) {
-    Object.assign(this, partial);
+   constructor(vehicule: Vehicule) {
+    this.id = vehicule.id;
+    this.marque = vehicule.marque;
+    this.modele = vehicule.modele;
+    this.annee = vehicule.annee;
+    this.prix = Number(vehicule.prix);
+    this.imageUrl = vehicule.imageUrl;
+    this.stock = vehicule.stock;
+    this.disponible = vehicule.disponible;
+    this.createdAt = vehicule.createdAt;
+    this.updatedAt = vehicule.updatedAt;
   }
 }
