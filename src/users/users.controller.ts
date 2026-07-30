@@ -43,8 +43,9 @@ export class UsersController {
     @ApiBearerAuth()
     @UseGuards(RolesGuard)
     @Roles(Role.ADMIN)
-    @ApiOperation({ summary: 'Lister tous les utilisateurs - ADMIN uniquement' })
+    @ApiOperation({ summary: 'Lister tous les utilisateurs (filtrable par role, ce champ peut être vide) - ADMIN uniquement' })
     @ApiResponse({ status: 403, description: 'Accès réservé à ADMIN' })
+    @ApiQuery({ name: 'role', required: false, example: 'CLIENT' })
     findAll(@Query() query: FindUsersDto) {
       return this.usersService.findAll(query.role);
     }

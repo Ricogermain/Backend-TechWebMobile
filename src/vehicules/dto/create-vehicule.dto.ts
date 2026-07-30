@@ -18,6 +18,7 @@ export class CreateVehiculeDto {
   @Max(new Date().getFullYear() + 1, { message: 'Année invalide' })
   annee: number;
 
+
   @ApiProperty({ example: 25000000 })
   @IsNumber()
   @IsPositive({ message: 'Le prix doit être positif' })
@@ -27,6 +28,11 @@ export class CreateVehiculeDto {
   @IsOptional()
   @IsUrl({}, { message: 'URL image invalide' })
   imageUrl?: string;
+
+  @ApiProperty({ example: 1 })
+  @IsInt()
+  @Min(0, { message: 'Nombre de stock invalide' })
+  stock: number;
 
   @ApiProperty({ example: true, required: false, default: true })
   @IsOptional()
