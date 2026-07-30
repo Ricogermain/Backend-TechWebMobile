@@ -67,10 +67,10 @@ export class UsersService {
             },
             orderBy: { id: 'asc' },
         });
-            return users.map((user) => new UserEntity(user));
-        }
+        return users.map((user) => new UserEntity(user));
+    }
 
-        async update(id: number, dto: UpdateUserDto): Promise<UserEntity> {
+    async update(id: number, dto: UpdateUserDto): Promise<UserEntity> {
         const existe = await this.db.utilisateur.findUnique({ where: { id } });
         if (!existe) {
             throw new NotFoundException('Utilisateur non trouvé');
