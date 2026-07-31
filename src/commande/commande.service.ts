@@ -1,8 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { CreateCommandeDto } from './dto/create-commande.dto';
 import { CommandeEntity } from './entities/commande.entity';
-import { StatutCommande } from '@prisma/client';
+import { Role, StatutCommande } from '@prisma/client';
+import { UpdateCommandeDto } from './dto/update-commande';
+import { CurrentUserPayload } from 'src/auth/decorators/current-user.decorator';
 
 @Injectable()
 export class CommandeService {
@@ -61,13 +63,17 @@ export class CommandeService {
         return commande.map((commande) => new CommandeEntity(commande));
     }
 
-    async findByIdClient(idClient: number): Promise<CommandeEntity[]> {
-        const commande = await this.db.commande.findMany({
-            where: { idClient: idClient },
-            orderBy: { id: 'asc' }
-        })
+    async findByIdClient(idClient: number, user: CurrentUserPayload): Promise<CommandeEntity[]> {
+        if (user.role !== Role.ADMIN && user.id !== idClient) {
+            throw new ForbiddenException("Vous ne pouvez consulter que vos propres commandes");
+        }
 
-        return commande.map((commande) => new CommandeEntity(commande));
+        const commande = await this.db.commande.findMany({
+            where: { idClient },
+            orderBy: { id: 'asc' },
+        });
+
+        return commande.map((c) => new CommandeEntity(c));
     }
 
     async updateStatut(id: number, statut: StatutCommande): Promise<CommandeEntity> {
@@ -79,6 +85,23 @@ export class CommandeService {
         const updated = await this.db.commande.update({
             where: { id },
             data: { statut },
+        });
+
+        return new CommandeEntity(updated);
+    }
+
+    async update(dto: UpdateCommandeDto, id: number, user: CurrentUserPayload): Promise<CommandeEntity> {
+        const existe = await this.db.commande.findUnique({ where: { id } });
+        if (!existe) {
+            throw new NotFoundException('Aucune commande trouvée');
+        }
+        if (user.role !== Role.ADMIN && existe.idClient !== user.id) {
+            throw new ForbiddenException("Vous ne pouvez modifier que votre propre commande");
+        }
+
+        const updated = await this.db.commande.update({
+            where: { id },
+            data: { adresseLivraison: dto.adresseLivraison },
         });
 
         return new CommandeEntity(updated);
