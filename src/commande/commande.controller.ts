@@ -6,11 +6,12 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import type { CurrentUserPayload } from 'src/auth/decorators/current-user.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { Role, StatutCommande } from '@prisma/client';
 import { FindCommandeDto } from './dto/find-commande.dto';
 import { SelfOrAdminGuard } from 'src/auth/guards/self-or-admin.guard';
 import { UpdateCommandeStatutDto } from './dto/update-commande-statut.dto';
 import { UpdateCommandeDto } from './dto/update-commande';
+import { RechercheCommandeDto } from './dto/recherche-commande.dto';
 
 @ApiTags('commande')
 @ApiBearerAuth()
@@ -56,19 +57,27 @@ export class CommandeController {
         return this.commandeService.findByIdClient(idClient, user);
     } 
     
-    @Patch(':id/statut')
+    @Patch('/statut/:id')
     @UseGuards(RolesGuard)
     @Roles(Role.ADMIN)
     @ApiOperation({ summary: "Modifier status d'une commande - ADMIN" })
     @ApiParam({ name: 'id', example: 1 })
-    @ApiBody({ type: UpdateCommandeStatutDto, examples: { exemple: { value: { addresse: 'Fianarantsoa, Andrainjato, bat AO1' } } } })
+    @ApiBody({ type: UpdateCommandeStatutDto, examples: { exemple: { value: { statut: StatutCommande.CONFIRMEE } } } })
     @ApiResponse({ status: 403, description: 'Accès réservé à ADMIN' })
     @ApiResponse({ status: 404, description: 'Commande non trouvé' })
     updateStatut(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCommandeStatutDto) {
         return this.commandeService.updateStatut(id, dto.statut);
-    }   
+    }  
+    
+    @Get('recherche')
+    @ApiOperation({ summary: 'Recherche par nom, marque, modele ou adresse client' })
+    @ApiQuery({ name: 'q', required: false, example: 'rico' })
+    @ApiResponse({ status: 200, description: 'Liste des commandes trouvées' })
+    recherche(@Query() dto: RechercheCommandeDto, @CurrentUser() user: CurrentUserPayload) {
+        return this.commandeService.recherche(dto.q, user);
+    }
 
-    @Patch(':id/Modifier')
+    @Patch('Modifier/:id')
     @ApiOperation({ summary: "Modifier une commande (addresse seulement) - soi même ou ADMIN" })
     @ApiParam({ name: 'id', example: 1 })
     @ApiBody({
@@ -95,6 +104,15 @@ export class CommandeController {
             throw new NotFoundException('Aucune commande trouvé');
         }
         return commande;
+    }
+
+    @Patch('Annuler/:id')
+    @ApiOperation({ summary: "Annuler une commande - soi même ou ADMIN" })
+    @ApiParam({ name: 'id', example: 1 })
+    @ApiResponse({ status: 403, description: "Réservé au propriétaire ou à l'ADMIN" })
+    @ApiResponse({ status: 404, description: 'Commande non trouvée' })
+    annulerCommander(@Param('id', ParseIntPipe) id: number,@CurrentUser() user: CurrentUserPayload) {
+        return this.commandeService.annulerCommander(id, user);
     }
 
 }

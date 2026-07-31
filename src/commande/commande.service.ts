@@ -5,6 +5,7 @@ import { CommandeEntity } from './entities/commande.entity';
 import { Role, StatutCommande } from '@prisma/client';
 import { UpdateCommandeDto } from './dto/update-commande';
 import { CurrentUserPayload } from 'src/auth/decorators/current-user.decorator';
+import { RechercheCommandeDto } from './dto/recherche-commande.dto';
 
 @Injectable()
 export class CommandeService {
@@ -105,5 +106,47 @@ export class CommandeService {
         });
 
         return new CommandeEntity(updated);
+    }
+
+    async annulerCommander(id: number, user: CurrentUserPayload): Promise<CommandeEntity> {
+        const existe = await this.db.commande.findUnique({ where: { id } });
+        if (!existe) {
+            throw new NotFoundException('Aucune commande trouvée');
+        }
+        if (user.role !== Role.ADMIN && existe.idClient !== user.id) {
+            throw new ForbiddenException("Vous ne pouvez annuler que votre propre commande");
+        }
+        if (existe.statut === StatutCommande.LIVREE) {
+            throw new ForbiddenException("Elle est déjà livrée, impossible de l'annuler");
+        }
+
+        const annuler = await this.db.commande.update({
+            where: { id },
+            data: { statut: StatutCommande.ANNULEE },
+        });
+
+        return new CommandeEntity(annuler);
+    }
+
+    async recherche(q: string | undefined, user: CurrentUserPayload): Promise<CommandeEntity[]> {
+        const filtreRecherche = q
+            ? {
+                OR: [
+                    { adresseLivraison: { contains: q, mode: 'insensitive' as const } },
+                    { client: { nom: { contains: q, mode: 'insensitive' as const } } },
+                    { vehicule: { marque: { contains: q, mode: 'insensitive' as const } } },
+                    { vehicule: { modele: { contains: q, mode: 'insensitive' as const } } },
+                ],
+            }
+            : {};
+
+        const liste = await this.db.commande.findMany({
+            where:
+                user.role === Role.ADMIN
+                    ? filtreRecherche
+                    : { idClient: user.id, ...filtreRecherche },
+        });
+
+        return liste.map((c) => new CommandeEntity(c));
     }
 }
