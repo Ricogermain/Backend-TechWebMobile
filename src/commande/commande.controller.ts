@@ -10,6 +10,7 @@ import { Role } from '@prisma/client';
 import { FindCommandeDto } from './dto/find-commande.dto';
 import { SelfOrAdminGuard } from 'src/auth/guards/self-or-admin.guard';
 import { UpdateCommandeStatutDto } from './dto/update-commande-statut.dto';
+import { UpdateCommandeDto } from './dto/update-commande';
 
 @ApiTags('commande')
 @ApiBearerAuth()
@@ -44,31 +45,42 @@ export class CommandeController {
       return this.commandeService.findAll(query.statut);
     }
 
-    @Get('ParIdClient/:id')
-    @UseGuards(SelfOrAdminGuard)
-    @ApiOperation({ summary: 'Consulter les commandes - soi-même ou ADMIN' })
-    @ApiParam({ name: 'idClient', example: 1 })
-    @ApiResponse({ status: 403, description: "Réservé au propriétaire ou à l'ADMIN" })
-    @ApiResponse({ status: 404, description: 'Utilisateur non trouvé' })
-    async findByIdClient(@Param('id', ParseIntPipe) id: number) {
-        const commande = await this.commandeService.findByIdClient(id);
-        if (!commande) {
-            throw new NotFoundException('Aucune commande trouvé');
-        }
-        return commande;
+    @Get('client/:idClient')
+    @ApiOperation({ summary: 'Lister les commandes d\'un client - le client lui-même ou ADMIN' })
+    @ApiParam({ name: 'idClient', example: 3 })
+    @ApiResponse({ status: 403, description: "Accès refusé" })
+    findByIdClient(
+        @Param('idClient', ParseIntPipe) idClient: number,
+        @CurrentUser() user: CurrentUserPayload,
+    ) {
+        return this.commandeService.findByIdClient(idClient, user);
     } 
     
     @Patch(':id/statut')
     @UseGuards(RolesGuard)
     @Roles(Role.ADMIN)
-    @ApiOperation({ summary: "Changer le statut d'une commande - ADMIN uniquement" })
+    @ApiOperation({ summary: "Modifier status d'une commande - ADMIN" })
     @ApiParam({ name: 'id', example: 1 })
-    @ApiBody({ type: UpdateCommandeStatutDto, examples: { exemple: { value: { statut: 'CONFIRMEE' } } } })
+    @ApiBody({ type: UpdateCommandeStatutDto, examples: { exemple: { value: { addresse: 'Fianarantsoa, Andrainjato, bat AO1' } } } })
     @ApiResponse({ status: 403, description: 'Accès réservé à ADMIN' })
     @ApiResponse({ status: 404, description: 'Commande non trouvé' })
     updateStatut(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCommandeStatutDto) {
         return this.commandeService.updateStatut(id, dto.statut);
     }   
+
+    @Patch(':id/Modifier')
+    @ApiOperation({ summary: "Modifier une commande (addresse seulement) - soi même ou ADMIN" })
+    @ApiParam({ name: 'id', example: 1 })
+    @ApiBody({
+        type: UpdateCommandeDto,
+        examples: { exemple: { value: { adresseLivraison: 'Fianarantsoa, Andrainjato, Bat A00' } } },
+    })
+    @ApiResponse({ status: 403, description: "Réservé au propriétaire ou à l'ADMIN" })
+    @ApiResponse({ status: 404, description: 'Commande non trouvée' })
+    update(@Param('id', ParseIntPipe) id: number, 
+        @Body() dto: UpdateCommandeDto, @CurrentUser() user: CurrentUserPayload) {
+        return this.commandeService.update(dto, id, user);
+    }
 
     @Get(':id')
     @UseGuards(RolesGuard)
@@ -76,7 +88,7 @@ export class CommandeController {
     @ApiOperation({ summary: 'Consulter les commandes par idCommande - ADMIN' })
     @ApiParam({ name: 'id', example: 1 })
     @ApiResponse({ status: 403, description: "Réservé au propriétaire ou à l'ADMIN" })
-    @ApiResponse({ status: 404, description: 'Aucune commande trouvé' })
+    @ApiResponse({ status: 404, description: 'Commande non trouvée' })
     async findById(@Param('id', ParseIntPipe) id: number) {
         const commande = await this.commandeService.findById(id);
         if (!commande) {

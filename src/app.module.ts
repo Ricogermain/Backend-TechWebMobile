@@ -15,8 +15,8 @@ import { CommandeModule } from './commande/commande.module';
     //20 requete par min max
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
     DatabaseModule,
-    UsersModule,
     AuthModule,
+    UsersModule,
     VehiculesModule,
     CommandeModule,
   ],
