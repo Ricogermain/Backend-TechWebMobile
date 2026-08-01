@@ -77,6 +77,23 @@ export class CommandeController {
         return this.commandeService.recherche(dto.q, user);
     }
 
+    @Get('date/:date')
+    @ApiOperation({ summary: 'Lister les commandes par date - le client lui-même ou ADMIN' })
+    @ApiParam({ name: 'date', example: '2026-07-31' })
+    @ApiResponse({ status: 200, description: 'Liste des commandes trouvées' })
+    findByDate(@Param('date') date: string, @CurrentUser() user: CurrentUserPayload) {
+        return this.commandeService.findByDate(new Date(date), user);
+    }
+
+    @Get('entre2date')
+    @ApiOperation({ summary: 'Lister les commandes entre 2 dates - le client lui-même ou ADMIN' })
+    @ApiQuery({ name: 'startDate', required: true, example: '2025-06-01' })
+    @ApiQuery({ name: 'endDate', required: true, example: '2027-06-30' })
+    @ApiResponse({ status: 200, description: 'Liste des commandes trouvées' })
+    findEntre2Date(@Query('startDate') startDate: string, @Query('endDate') endDate: string, @CurrentUser() user: CurrentUserPayload) {
+        return this.commandeService.findEntre2Date(new Date(startDate), new Date(endDate), user);
+    }
+
     @Patch('Modifier/:id')
     @ApiOperation({ summary: "Modifier une commande (addresse seulement) - soi même ou ADMIN" })
     @ApiParam({ name: 'id', example: 1 })
@@ -113,6 +130,20 @@ export class CommandeController {
     @ApiResponse({ status: 404, description: 'Commande non trouvée' })
     annulerCommander(@Param('id', ParseIntPipe) id: number,@CurrentUser() user: CurrentUserPayload) {
         return this.commandeService.annulerCommander(id, user);
+    }
+
+    @Get('statistiques/par-statut')
+    @ApiOperation({ summary: 'Nombre de commandes par statut (ADMIN: global, client: le sien)' })
+    @ApiResponse({ status: 200, description: 'Statistiques des commandes groupées par statut' })
+    statistiquesParStatut(@CurrentUser() user: CurrentUserPayload) {
+        return this.commandeService.statistiquesCommandesParStatut(user);
+    }
+
+    @Get('statistiques/par-mois')
+    @ApiOperation({ summary: 'Nombre de commandes par mois (ADMIN: global, client: le sien)' })
+    @ApiResponse({ status: 200, description: 'Statistiques des commandes groupées par mois' })
+    statistiquesParMois(@CurrentUser() user: CurrentUserPayload) {
+        return this.commandeService.statistiquesCommandesParMois(user);
     }
 
 }
