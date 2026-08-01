@@ -149,4 +149,73 @@ export class CommandeService {
 
         return liste.map((c) => new CommandeEntity(c));
     }
+
+    async findByDate(date: Date, user: CurrentUserPayload): Promise<CommandeEntity[]> {
+        const debutJour = new Date(date);
+        debutJour.setHours(0, 0, 0, 0);
+
+        const finJour = new Date(date);
+        finJour.setHours(23, 59, 59, 999);
+
+        const commandes = await this.db.commande.findMany({
+            where: {
+                dateCommande: { gte: debutJour, lte: finJour },
+                ...(user.role !== Role.ADMIN && { idClient: user.id }),
+            },
+        });
+        return commandes.map((c) => new CommandeEntity(c));
+    }
+
+    async findEntre2Date(startDate: Date, endDate: Date, user: CurrentUserPayload): Promise<CommandeEntity[]> {
+        const commandes = await this.db.commande.findMany({
+            where: {
+                dateCommande: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+                ...(user.role !== Role.ADMIN && { idClient: user.id }),
+            },
+            orderBy: { dateCommande: 'asc' },
+        });
+        return commandes.map((c) => new CommandeEntity(c));
+    }
+
+    async statistiquesCommandesParMois( user: CurrentUserPayload,): Promise<{ mois: string; totalCommandes: number }[]> {
+        const commandes = await this.db.commande.findMany({
+            where: user.role !== Role.ADMIN ? { idClient: user.id } : {},
+            select: { dateCommande: true },
+        });
+
+        const compteur = new Map<string, number>();
+        for (const c of commandes) {
+            const mois = `${c.dateCommande.getFullYear()}-${String(c.dateCommande.getMonth() + 1).padStart(2, '0')}`;
+            compteur.set(mois, (compteur.get(mois) ?? 0) + 1);
+        }
+
+        return Array.from(compteur.entries())
+            .map(([mois, totalCommandes]) => ({ mois, totalCommandes }))
+            .sort((a, b) => a.mois.localeCompare(b.mois));
+    }
+
+    async statistiquesCommandesParStatut(user: CurrentUserPayload,): Promise<{ statut: StatutCommande; totalCommandes: number }[]> {
+        const resultats = await this.db.commande.groupBy({
+            by: ['statut'],
+            _count: { statut: true },
+            ...(user.role !== Role.ADMIN && { where: { idClient: user.id } }),
+        });
+
+        const statistiques = Object.values(StatutCommande).map((statut) => ({
+            statut,
+            totalCommandes: 0,
+        }));
+
+        for (const stat of statistiques) {
+            const trouve = resultats.find((r) => r.statut === stat.statut);
+            if (trouve) {
+                stat.totalCommandes = trouve._count.statut;
+            }
+        }
+
+        return statistiques;
+    }
 }
