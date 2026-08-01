@@ -9,6 +9,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { VehiculesModule } from './vehicules/vehicules.module';
 import { CommandeModule } from './commande/commande.module';
+import { LivraisonModule } from './livraison/livraison.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CommandeModule } from './commande/commande.module';
     UsersModule,
     VehiculesModule,
     CommandeModule,
+    LivraisonModule,
   ],
   controllers: [AppController],
   providers: [
