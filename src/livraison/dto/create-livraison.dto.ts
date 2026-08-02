@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsPositive } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsPositive } from 'class-validator';
 
 export class CreateLivraisonDto {
   @ApiProperty({ example: 1 })
@@ -12,4 +12,9 @@ export class CreateLivraisonDto {
   @IsInt()
   @IsPositive({ message: "L'identifiant du livreur doit être positif" })
   idLivreur?: number;
+
+  @ApiProperty({ example: '2026-08-05T14:00:00.000Z', required: false, description: 'Date de livraison prévue/effective' })
+  @IsOptional()
+  @IsDateString({}, { message: 'Date de livraison invalide' })
+  dateLivraison?: string;
 }
