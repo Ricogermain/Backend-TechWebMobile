@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { LivraisonEntity } from './entities/livraison.entity';
 import { CreateLivraisonDto } from './dto/create-livraison.dto';
 import { FindLivraisonDto } from './dto/find-livraison.dto';
-import { Role } from '@prisma/client';
+import { Role, StatutCommande, StatutLivraison } from '@prisma/client';
+import { CurrentUserPayload } from 'src/auth/decorators/current-user.decorator';
 
 @Injectable()
 export class LivraisonService {
@@ -45,6 +46,37 @@ export class LivraisonService {
             orderBy: { id: 'asc' },
         });
         return livraisons.map((l) => new LivraisonEntity(l));
+    }
+
+    async updateStatut(id: number, statut: StatutLivraison, user: CurrentUserPayload): Promise<LivraisonEntity> {
+        const livraison = await this.db.livraison.findUnique({ where: { id } });
+        if (!livraison) {
+            throw new NotFoundException('Livraison non trouvée');
+        }
+        if (user.role !== Role.ADMIN && livraison.idLivreur !== user.id) {
+            throw new ForbiddenException("Vous ne pouvez modifier que vos propres livraisons");
+        }
+
+        const updated = await this.db.$transaction(async (tx) => {
+            const livraisonMaj = await tx.livraison.update({
+                where: { id },
+                data: {
+                    statut,
+                    ...(statut === StatutLivraison.LIVREE && { dateLivraison: new Date() }),
+                },
+            });
+
+            if (statut === StatutLivraison.LIVREE) {
+                await tx.commande.update({
+                    where: { id: livraisonMaj.idCommande },
+                    data: { statut: StatutCommande.LIVREE },
+                });
+            }
+
+            return livraisonMaj;
+        });
+
+        return new LivraisonEntity(updated);
     }
 
     private async verifierEstLivreur(idLivreur: number): Promise<void> {
