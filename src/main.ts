@@ -1,20 +1,23 @@
-import 'dotenv/config'
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { Console } from 'console';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(helmet());
 
   app.enableCors({
-    origin: true, // à modifier plus tard pour l'URL exacte de notre build Flutter
+    origin: '*', // Accepter toutes les origines
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-    credentials: true,
+    credentials: false,
   });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('API Gestion de commande et livraison de voiture')
@@ -25,6 +28,9 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  const port = process.env.PORT ?? 3000;
+  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Android emulator: http://10.0.2.2:${port}`);
 }
 bootstrap();

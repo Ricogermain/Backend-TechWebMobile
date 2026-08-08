@@ -26,7 +26,7 @@ export class CreateVehiculeDto {
 
   @ApiProperty({ example: 'https://example.com/toyota-corolla.jpg', required: false })
   @IsOptional()
-  @IsUrl({}, { message: 'URL image invalide' })
+  @IsString()
   imageUrl?: string;
 
   @ApiProperty({ example: 1 })
