@@ -50,7 +50,77 @@ async function main() {
     });
   }
 
-  console.log('Seed terminé : 1 utilisateur par rôle créé ou mis à jour.');
+  // These images are bundled with the Flutter application. The `asset:`
+  // prefix lets the mobile client display them without an external image host.
+  const vehicules = [
+    {
+      marque: 'Tesla',
+      modele: 'Model 3',
+      annee: 2024,
+      prix: 85000000,
+      stock: 3,
+      disponible: true,
+      imageUrl: 'asset:catalogue/voiture1.png',
+    },
+    {
+      marque: 'BMW',
+      modele: 'X5',
+      annee: 2023,
+      prix: 95000000,
+      stock: 2,
+      disponible: true,
+      imageUrl: 'asset:catalogue/voiture2.png',
+    },
+    {
+      marque: 'Mercedes-Benz',
+      modele: 'Classe C',
+      annee: 2024,
+      prix: 78000000,
+      stock: 4,
+      disponible: true,
+      imageUrl: 'asset:catalogue/voiture3.png',
+    },
+    {
+      marque: 'Toyota',
+      modele: 'RAV4',
+      annee: 2024,
+      prix: 62000000,
+      stock: 5,
+      disponible: true,
+      imageUrl: 'asset:catalogue/voiture4.png',
+    },
+    {
+      marque: 'Porsche',
+      modele: '911 Carrera',
+      annee: 2023,
+      prix: 99000000,
+      stock: 1,
+      disponible: true,
+      imageUrl: 'asset:catalogue/voiture5.png',
+    },
+  ];
+
+  for (const vehicule of vehicules) {
+    const existing = await prisma.vehicule.findFirst({
+      where: {
+        marque: vehicule.marque,
+        modele: vehicule.modele,
+        annee: vehicule.annee,
+      },
+    });
+    if (existing) {
+      await prisma.vehicule.update({
+        where: { id: existing.id },
+        data: vehicule,
+      });
+    } else {
+      await prisma.vehicule.create({ data: vehicule });
+    }
+  }
+
+  console.log(
+    'Seed terminé : utilisateurs et 5 véhicules de catalogue créés ou mis à jour.',
+  );
 }
 
 main()

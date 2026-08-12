@@ -1,5 +1,24 @@
-import { Body, Controller, Get, NotFoundException, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CommandeService } from './commande.service';
 import { CreateCommandeDto } from './dto/create-commande.dto';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
@@ -17,133 +36,209 @@ import { RechercheCommandeDto } from './dto/recherche-commande.dto';
 @ApiBearerAuth()
 @Controller('commande')
 export class CommandeController {
-    constructor(private readonly commandeService: CommandeService) {}
+  constructor(private readonly commandeService: CommandeService) {}
 
-    @Post()
-    @ApiOperation({ summary: "Faire une commande"})
-    @ApiBody({
-        type: CreateCommandeDto,
-        examples:{
-            exemple: {
-                summary: "Ajout d' une commande",
-                value: {idVehicule: 1, adresseLivraison: "Fianarantso, Antanambao, Lot II M 45"}
-            }
-        }
-    })
-    @ApiResponse({ status: 201, description: 'Commande envoyée'})
-    @ApiResponse({ status: 404, description: 'Véhicule indisponible'})
-    create(@Body() dto: CreateCommandeDto, @CurrentUser() user: CurrentUserPayload) {
-        return this.commandeService.create(dto, user.id);
+  @Post()
+  @ApiOperation({ summary: 'Faire une commande' })
+  @ApiBody({
+    type: CreateCommandeDto,
+    examples: {
+      exemple: {
+        summary: "Ajout d' une commande",
+        value: {
+          idVehicule: 1,
+          adresseLivraison: 'Fianarantso, Antanambao, Lot II M 45',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Commande envoyée' })
+  @ApiResponse({ status: 404, description: 'Véhicule indisponible' })
+  create(
+    @Body() dto: CreateCommandeDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.commandeService.create(dto, user.id);
+  }
+
+  @Get()
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary:
+      'Lister toutes les commande (filtrable par statut, ce champ peut être vide) - ADMIN uniquement',
+  })
+  @ApiResponse({ status: 403, description: 'Accès réservé à ADMIN' })
+  @ApiQuery({ name: 'statut', required: false, example: 'EN_ATTENTE' })
+  findAll(@Query() query: FindCommandeDto) {
+    return this.commandeService.findAll(query.statut);
+  }
+
+  @Get('client/:idClient')
+  @ApiOperation({
+    summary: "Lister les commandes d'un client - le client lui-même ou ADMIN",
+  })
+  @ApiParam({ name: 'idClient', example: 3 })
+  @ApiResponse({ status: 403, description: 'Accès refusé' })
+  findByIdClient(
+    @Param('idClient', ParseIntPipe) idClient: number,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.commandeService.findByIdClient(idClient, user);
+  }
+
+  @Patch('/statut/:id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: "Modifier status d'une commande - ADMIN" })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiBody({
+    type: UpdateCommandeStatutDto,
+    examples: { exemple: { value: { statut: StatutCommande.CONFIRMEE } } },
+  })
+  @ApiResponse({ status: 403, description: 'Accès réservé à ADMIN' })
+  @ApiResponse({ status: 404, description: 'Commande non trouvé' })
+  updateStatut(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCommandeStatutDto,
+  ) {
+    return this.commandeService.updateStatut(id, dto.statut);
+  }
+
+  @Get('recherche')
+  @ApiOperation({
+    summary: 'Recherche par nom, marque, modele ou adresse client',
+  })
+  @ApiQuery({ name: 'q', required: false, example: 'rico' })
+  @ApiResponse({ status: 200, description: 'Liste des commandes trouvées' })
+  recherche(
+    @Query() dto: RechercheCommandeDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.commandeService.recherche(dto.q, user);
+  }
+
+  @Get('date/:date')
+  @ApiOperation({
+    summary: 'Lister les commandes par date - le client lui-même ou ADMIN',
+  })
+  @ApiParam({ name: 'date', example: '2026-07-31' })
+  @ApiResponse({ status: 200, description: 'Liste des commandes trouvées' })
+  findByDate(
+    @Param('date') date: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.commandeService.findByDate(new Date(date), user);
+  }
+
+  @Get('entre2date')
+  @ApiOperation({
+    summary: 'Lister les commandes entre 2 dates - le client lui-même ou ADMIN',
+  })
+  @ApiQuery({ name: 'startDate', required: true, example: '2025-06-01' })
+  @ApiQuery({ name: 'endDate', required: true, example: '2027-06-30' })
+  @ApiResponse({ status: 200, description: 'Liste des commandes trouvées' })
+  findEntre2Date(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.commandeService.findEntre2Date(
+      new Date(startDate),
+      new Date(endDate),
+      user,
+    );
+  }
+
+  @Patch('Modifier/:id')
+  @ApiOperation({
+    summary: 'Modifier une commande (addresse seulement) - soi même ou ADMIN',
+  })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiBody({
+    type: UpdateCommandeDto,
+    examples: {
+      exemple: {
+        value: { adresseLivraison: 'Fianarantsoa, Andrainjato, Bat A00' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description: "Réservé au propriétaire ou à l'ADMIN",
+  })
+  @ApiResponse({ status: 404, description: 'Commande non trouvée' })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCommandeDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.commandeService.update(dto, id, user);
+  }
+
+  @Get('id/:id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Consulter les commandes par idCommande - ADMIN' })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiResponse({
+    status: 403,
+    description: "Réservé au propriétaire ou à l'ADMIN",
+  })
+  @ApiResponse({ status: 404, description: 'Commande non trouvée' })
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const commande = await this.commandeService.findById(id);
+    if (!commande) {
+      throw new NotFoundException('Aucune commande trouvé');
     }
+    return commande;
+  }
 
-    @Get()
-    @UseGuards(RolesGuard)
-    @Roles(Role.ADMIN)
-    @ApiOperation({ summary: 'Lister toutes les commande (filtrable par statut, ce champ peut être vide) - ADMIN uniquement' })
-    @ApiResponse({ status: 403, description: 'Accès réservé à ADMIN' })
-    @ApiQuery({ name: 'statut', required: false, example: 'EN_ATTENTE' })
-    findAll(@Query() query: FindCommandeDto) {
-      return this.commandeService.findAll(query.statut);
-    }
+  @Patch('Annuler/:id')
+  @ApiOperation({ summary: 'Annuler une commande - soi même ou ADMIN' })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiResponse({
+    status: 403,
+    description: "Réservé au propriétaire ou à l'ADMIN",
+  })
+  @ApiResponse({ status: 404, description: 'Commande non trouvée' })
+  annulerCommander(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.commandeService.annulerCommander(id, user);
+  }
 
-    @Get('client/:idClient')
-    @ApiOperation({ summary: 'Lister les commandes d\'un client - le client lui-même ou ADMIN' })
-    @ApiParam({ name: 'idClient', example: 3 })
-    @ApiResponse({ status: 403, description: "Accès refusé" })
-    findByIdClient(
-        @Param('idClient', ParseIntPipe) idClient: number,
-        @CurrentUser() user: CurrentUserPayload,
-    ) {
-        return this.commandeService.findByIdClient(idClient, user);
-    } 
-    
-    @Patch('/statut/:id')
-    @UseGuards(RolesGuard)
-    @Roles(Role.ADMIN)
-    @ApiOperation({ summary: "Modifier status d'une commande - ADMIN" })
-    @ApiParam({ name: 'id', example: 1 })
-    @ApiBody({ type: UpdateCommandeStatutDto, examples: { exemple: { value: { statut: StatutCommande.CONFIRMEE } } } })
-    @ApiResponse({ status: 403, description: 'Accès réservé à ADMIN' })
-    @ApiResponse({ status: 404, description: 'Commande non trouvé' })
-    updateStatut(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCommandeStatutDto) {
-        return this.commandeService.updateStatut(id, dto.statut);
-    }  
-    
-    @Get('recherche')
-    @ApiOperation({ summary: 'Recherche par nom, marque, modele ou adresse client' })
-    @ApiQuery({ name: 'q', required: false, example: 'rico' })
-    @ApiResponse({ status: 200, description: 'Liste des commandes trouvées' })
-    recherche(@Query() dto: RechercheCommandeDto, @CurrentUser() user: CurrentUserPayload) {
-        return this.commandeService.recherche(dto.q, user);
-    }
+  @Get('statistiques/par-statut')
+  @ApiOperation({
+    summary: 'Nombre de commandes par statut (ADMIN: global, client: le sien)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistiques des commandes groupées par statut',
+  })
+  statistiquesParStatut(@CurrentUser() user: CurrentUserPayload) {
+    return this.commandeService.statistiquesCommandesParStatut(user);
+  }
 
-    @Get('date/:date')
-    @ApiOperation({ summary: 'Lister les commandes par date - le client lui-même ou ADMIN' })
-    @ApiParam({ name: 'date', example: '2026-07-31' })
-    @ApiResponse({ status: 200, description: 'Liste des commandes trouvées' })
-    findByDate(@Param('date') date: string, @CurrentUser() user: CurrentUserPayload) {
-        return this.commandeService.findByDate(new Date(date), user);
-    }
+  @Get('statistiques/par-mois')
+  @ApiOperation({
+    summary: 'Nombre de commandes par mois (ADMIN: global, client: le sien)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistiques des commandes groupées par mois',
+  })
+  statistiquesParMois(@CurrentUser() user: CurrentUserPayload) {
+    return this.commandeService.statistiquesCommandesParMois(user);
+  }
 
-    @Get('entre2date')
-    @ApiOperation({ summary: 'Lister les commandes entre 2 dates - le client lui-même ou ADMIN' })
-    @ApiQuery({ name: 'startDate', required: true, example: '2025-06-01' })
-    @ApiQuery({ name: 'endDate', required: true, example: '2027-06-30' })
-    @ApiResponse({ status: 200, description: 'Liste des commandes trouvées' })
-    findEntre2Date(@Query('startDate') startDate: string, @Query('endDate') endDate: string, @CurrentUser() user: CurrentUserPayload) {
-        return this.commandeService.findEntre2Date(new Date(startDate), new Date(endDate), user);
-    }
-
-    @Patch('Modifier/:id')
-    @ApiOperation({ summary: "Modifier une commande (addresse seulement) - soi même ou ADMIN" })
-    @ApiParam({ name: 'id', example: 1 })
-    @ApiBody({
-        type: UpdateCommandeDto,
-        examples: { exemple: { value: { adresseLivraison: 'Fianarantsoa, Andrainjato, Bat A00' } } },
-    })
-    @ApiResponse({ status: 403, description: "Réservé au propriétaire ou à l'ADMIN" })
-    @ApiResponse({ status: 404, description: 'Commande non trouvée' })
-    update(@Param('id', ParseIntPipe) id: number, 
-        @Body() dto: UpdateCommandeDto, @CurrentUser() user: CurrentUserPayload) {
-        return this.commandeService.update(dto, id, user);
-    }
-
-    @Get(':id')
-    @UseGuards(RolesGuard)
-    @Roles(Role.ADMIN)
-    @ApiOperation({ summary: 'Consulter les commandes par idCommande - ADMIN' })
-    @ApiParam({ name: 'id', example: 1 })
-    @ApiResponse({ status: 403, description: "Réservé au propriétaire ou à l'ADMIN" })
-    @ApiResponse({ status: 404, description: 'Commande non trouvée' })
-    async findById(@Param('id', ParseIntPipe) id: number) {
-        const commande = await this.commandeService.findById(id);
-        if (!commande) {
-            throw new NotFoundException('Aucune commande trouvé');
-        }
-        return commande;
-    }
-
-    @Patch('Annuler/:id')
-    @ApiOperation({ summary: "Annuler une commande - soi même ou ADMIN" })
-    @ApiParam({ name: 'id', example: 1 })
-    @ApiResponse({ status: 403, description: "Réservé au propriétaire ou à l'ADMIN" })
-    @ApiResponse({ status: 404, description: 'Commande non trouvée' })
-    annulerCommander(@Param('id', ParseIntPipe) id: number,@CurrentUser() user: CurrentUserPayload) {
-        return this.commandeService.annulerCommander(id, user);
-    }
-
-    @Get('statistiques/par-statut')
-    @ApiOperation({ summary: 'Nombre de commandes par statut (ADMIN: global, client: le sien)' })
-    @ApiResponse({ status: 200, description: 'Statistiques des commandes groupées par statut' })
-    statistiquesParStatut(@CurrentUser() user: CurrentUserPayload) {
-        return this.commandeService.statistiquesCommandesParStatut(user);
-    }
-
-    @Get('statistiques/par-mois')
-    @ApiOperation({ summary: 'Nombre de commandes par mois (ADMIN: global, client: le sien)' })
-    @ApiResponse({ status: 200, description: 'Statistiques des commandes groupées par mois' })
-    statistiquesParMois(@CurrentUser() user: CurrentUserPayload) {
-        return this.commandeService.statistiquesCommandesParMois(user);
-    }
-
+  // Keep the original endpoint after every static route so that
+  // `/statistiques/...` is never captured as an id.
+  @Get(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  findByIdLegacy(@Param('id', ParseIntPipe) id: number) {
+    return this.findById(id);
+  }
 }
