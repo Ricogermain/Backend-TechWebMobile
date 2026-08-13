@@ -5,13 +5,17 @@ import { Pool } from 'pg';
 
 @Injectable()
 export class DatabaseService extends PrismaClient implements OnModuleInit {
-    constructor() {
-        const pool = new Pool({ connectionString: process.env.DIRECT_URL});
-        const adapter = new PrismaPg(pool);
-        super({ adapter })
+  constructor() {
+    const connectionString = process.env.DATABASE_URL ?? process.env.DIRECT_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL ou DIRECT_URL doit être défini.');
     }
-    
-    async onModuleInit() {
-        await this.$connect();
-    }
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
+    super({ adapter });
+  }
+
+  async onModuleInit() {
+    await this.$connect();
+  }
 }
