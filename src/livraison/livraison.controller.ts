@@ -33,10 +33,10 @@ export class LivraisonController {
     }
 
     @Get()
-    @ApiOperation({ summary: 'Lister les livraisons (filtre optionnel par statut et/ou livreur)' })
+    @ApiOperation({ summary: 'Lister les livraisons (filtre optionnel par statut, livreur, client et/ou commande)' })
     @ApiResponse({ status: 200, description: 'Liste des livraisons' })
-    findAll(@Query() dto: FindLivraisonDto) {
-        return this.livraisonService.findAll(dto);
+    findAll(@Query() dto: FindLivraisonDto, @CurrentUser() user: CurrentUserPayload) {
+        return this.livraisonService.findAll(dto, user);
     }
 
     @Get('liste/:id')

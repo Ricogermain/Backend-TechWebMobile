@@ -14,4 +14,16 @@ export class FindLivraisonDto {
   @Type(() => Number)
   @IsInt()
   idLivreur?: number;
+
+  @ApiProperty({ required: false, example: 3, description: 'Filtrer par client (via sa commande)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  idClient?: number;
+
+  @ApiProperty({ required: false, example: 1, description: 'Filtrer par commande' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  idCommande?: number;
 }

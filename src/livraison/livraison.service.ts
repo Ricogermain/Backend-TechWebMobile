@@ -39,11 +39,29 @@ export class LivraisonService {
         return new LivraisonEntity(livraison);
     }
 
-    async findAll(dto: FindLivraisonDto): Promise<LivraisonEntity[]> {
+    async findAll(dto: FindLivraisonDto, user: CurrentUserPayload): Promise<LivraisonEntity[]> {
+        // Un client ne voit que les livraisons liées à ses propres commandes,
+        // même s'il tente de passer un autre idClient.
+        const idClient = user.role === Role.CLIENT ? user.id : dto.idClient;
+
         const livraisons = await this.db.livraison.findMany({
             where: {
                 ...(dto.statut && { statut: dto.statut }),
                 ...(dto.idLivreur && { idLivreur: dto.idLivreur }),
+                ...(dto.idCommande && { idCommande: dto.idCommande }),
+                ...(idClient && { commande: { idClient } }),
+            },
+            include: {
+                commande: {
+                    include: {
+                        client: {
+                            select: { id: true, nom: true, email: true, telephone: true },
+                        },
+                        vehicule: {
+                            select: { id: true, marque: true, modele: true, imageUrl: true },
+                        },
+                    },
+                },
             },
             orderBy: { id: 'asc' },
         });
@@ -70,7 +88,11 @@ export class LivraisonService {
             throw new NotFoundException('Livraison non trouvée');
         }
         if (user.role !== Role.ADMIN && livraison.idLivreur !== user.id) {
-            throw new ForbiddenException("Vous ne pouvez modifier que vos propres livraisons");
+            // Le client propriétaire de la commande peut consulter sa livraison.
+            if (user.role === Role.CLIENT && livraison.commande?.client?.id === user.id) {
+                return new LivraisonEntity(livraison);
+            }
+            throw new ForbiddenException("Vous ne pouvez consulter que vos propres livraisons");
         }
         return new LivraisonEntity(livraison);
     }
