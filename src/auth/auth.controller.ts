@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nes
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { BlacklistService } from './blacklist.service';
 import { Public } from './decorators/public.decorator';
@@ -15,6 +16,23 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly blacklistService: BlacklistService,
   ) {}
+
+  @Post('register')
+  @Public()
+  @ApiOperation({ summary: "Inscription (rôle CLIENT, LIVREUR ou ADMIN, CLIENT par défaut)" })
+  @ApiBody({
+    type: RegisterDto,
+    examples: {
+      client: { summary: 'Inscription client', value: { nom: 'Rico', email: 'rico@example.com', motDePasse: 'password123', telephone: '0341234567', role: 'CLIENT' } },
+      livreur: { summary: 'Inscription livreur', value: { nom: 'Fara', email: 'fara@example.com', motDePasse: 'password123', role: 'LIVREUR' } },
+      admin: { summary: 'Inscription admin', value: { nom: 'Admin', email: 'admin@example.com', motDePasse: 'password123', role: 'ADMIN' } },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Inscription réussie, token JWT et utilisateur renvoyés' })
+  @ApiResponse({ status: 409, description: 'Email déjà utilisé' })
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
 
   @Post('login')
   @Public()
