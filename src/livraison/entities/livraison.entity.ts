@@ -26,7 +26,7 @@ export class LivraisonEntity {
   @ApiProperty()
   updatedAt: Date;
 
-  /** Commande associée (adresse, client, véhicule) — incluse dans le détail. */
+  /** Commande associée (adresse, client, véhicule) — incluse dans la liste et le détail. */
   @ApiProperty({ nullable: true })
   commande?: {
     id: number;
@@ -46,7 +46,21 @@ export class LivraisonEntity {
     } | null;
   } | null;
 
-  constructor(livraison: Livraison & { commande?: LivraisonEntity['commande'] }) {
+  /** Livreur assigné — inclus dans la liste et le détail. */
+  @ApiProperty({ nullable: true })
+  livreur?: {
+    id: number;
+    nom: string;
+    email: string;
+    telephone: string | null;
+  } | null;
+
+  constructor(
+    livraison: Livraison & {
+      commande?: LivraisonEntity['commande'];
+      livreur?: LivraisonEntity['livreur'];
+    },
+  ) {
     this.id = livraison.id;
     this.idCommande = livraison.idCommande;
     this.idLivreur = livraison.idLivreur;
@@ -56,5 +70,6 @@ export class LivraisonEntity {
     this.createdAt = livraison.createdAt;
     this.updatedAt = livraison.updatedAt;
     this.commande = livraison.commande ?? null;
+    this.livreur = livraison.livreur ?? null;
   }
 }

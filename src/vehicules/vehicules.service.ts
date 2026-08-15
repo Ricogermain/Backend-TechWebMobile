@@ -1,12 +1,57 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { unlinkSync } from 'fs';
+import { join } from 'path';
 import { DatabaseService } from 'src/database/database.service';
 import { CreateVehiculeDto } from './dto/create-vehicule.dto';
 import { VehiculeEntity } from './entities/vehicule.entity';
 import { UpdateVehiculeDto } from './dto/update-vehicule.dto';
+import { buildPhotoUrl, VEHICULE_PHOTO_DIR } from './vehicules-upload.config';
 
 @Injectable()
 export class VehiculesService {
     constructor(private readonly db: DatabaseService) {}
+
+    /**
+     * Associe un fichier uploadé au véhicule et nettoie l'ancienne photo si
+     * celle-ci avait déjà été uploadée sur le serveur.
+     */
+    async uploadPhoto(id: number, file: Express.Multer.File): Promise<VehiculeEntity> {
+        const existe = await this.db.vehicule.findUnique({ where: { id } });
+        if (!existe) {
+            this.deletePhotoFileOnDisk(file.path);
+            throw new NotFoundException('Vehicule non trouvé');
+        }
+
+        const photoUrl = buildPhotoUrl(file.filename);
+        const updated = await this.db.vehicule.update({
+            where: { id },
+            data: { imageUrl: photoUrl },
+        });
+
+        // L'ancienne photo n'est supprimée qu'après la mise à jour réussie.
+        this.deletePhotoFileOnDisk(existe.imageUrl);
+        return new VehiculeEntity(updated);
+    }
+
+    /**
+     * Supprime le fichier photo associé à une URL de la forme /uploads/vehicules/...
+     * Les URLs externes (http, data:, asset:) sont ignorées.
+     */
+    private deletePhotoFileOnDisk(imageUrl?: string | null): void {
+        if (!imageUrl) return;
+
+        const marker = `/${VEHICULE_PHOTO_DIR}/`;
+        if (!imageUrl.startsWith(marker)) return;
+
+        const filename = imageUrl.substring(marker.length);
+        if (!filename || filename.includes('..') || filename.includes('/')) return;
+
+        try {
+            unlinkSync(join(process.cwd(), VEHICULE_PHOTO_DIR, filename));
+        } catch {
+            // Fichier déjà absent : rien à faire.
+        }
+    }
 
     async create(dto: CreateVehiculeDto): Promise<VehiculeEntity>{
         const vehicule = await this.db.vehicule.create({
@@ -85,6 +130,9 @@ export class VehiculesService {
         const supprimer = await this.db.vehicule.delete({
             where: { id },
         });
+
+        // Supprime aussi la photo éventuellement uploadée sur le serveur.
+        this.deletePhotoFileOnDisk(existe.imageUrl);
 
         return new VehiculeEntity(supprimer);
     }

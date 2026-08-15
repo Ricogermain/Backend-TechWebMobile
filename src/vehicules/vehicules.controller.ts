@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { VehiculesService } from './vehicules.service';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateVehiculeDto } from './dto/create-vehicule.dto';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -8,6 +9,7 @@ import { Role } from '@prisma/client';
 import { FindVehiculesDto } from './dto/find-vehicules.dto';
 import { SearchVehiculeDto } from './dto/search-vehicule.dto';
 import { UpdateVehiculeDto } from './dto/update-vehicule.dto';
+import { vehiculePhotoUploadOptions } from './vehicules-upload.config';
 
 @ApiTags('vehicules')
 @ApiBearerAuth()
@@ -75,6 +77,38 @@ export class VehiculesController {
         throw new NotFoundException('Véhicule non trouvé');
       }
       return vehicule;
+    }
+
+    @Post(':id/photo')
+    @UseGuards(RolesGuard)
+    @Roles(Role.ADMIN)
+    @UseInterceptors(FileInterceptor('photo', vehiculePhotoUploadOptions))
+    @ApiConsumes('multipart/form-data')
+    @ApiOperation({ summary: "Upload de la photo d'un véhicule - ADMIN" })
+    @ApiParam({ name: 'id', example: 1 })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                photo: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Image du véhicule (JPEG, PNG, WebP ou GIF, max 5 Mo)',
+                },
+            },
+        },
+    })
+    @ApiResponse({ status: 200, description: 'Photo uploadée et URL mise à jour' })
+    @ApiResponse({ status: 403, description: "Réservé à l'ADMIN" })
+    @ApiResponse({ status: 404, description: 'Véhicule non trouvé' })
+    async uploadPhoto(
+        @Param('id', ParseIntPipe) id: number,
+        @UploadedFile() file?: Express.Multer.File,
+    ) {
+        if (!file) {
+            throw new BadRequestException('Aucun fichier photo reçu (champ "photo")');
+        }
+        return this.vehiculeService.uploadPhoto(id, file);
     }
 
     @Patch(':id')

@@ -62,6 +62,9 @@ export class LivraisonService {
                         },
                     },
                 },
+                livreur: {
+                    select: { id: true, nom: true, email: true, telephone: true },
+                },
             },
             orderBy: { id: 'asc' },
         });
@@ -81,6 +84,9 @@ export class LivraisonService {
                             select: { id: true, marque: true, modele: true, imageUrl: true },
                         },
                     },
+                },
+                livreur: {
+                    select: { id: true, nom: true, email: true, telephone: true },
                 },
             },
         });
