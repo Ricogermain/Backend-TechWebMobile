@@ -51,7 +51,21 @@ export class LivraisonService {
     }
 
     async findById(id: number, user: CurrentUserPayload): Promise<LivraisonEntity> {
-        const livraison = await this.db.livraison.findUnique({ where: { id } });
+        const livraison = await this.db.livraison.findUnique({
+            where: { id },
+            include: {
+                commande: {
+                    include: {
+                        client: {
+                            select: { id: true, nom: true, email: true, telephone: true },
+                        },
+                        vehicule: {
+                            select: { id: true, marque: true, modele: true, imageUrl: true },
+                        },
+                    },
+                },
+            },
+        });
         if (!livraison) {
             throw new NotFoundException('Livraison non trouvée');
         }

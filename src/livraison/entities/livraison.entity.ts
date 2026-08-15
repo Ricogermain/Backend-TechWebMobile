@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Livraison, StatutLivraison } from '@prisma/client';
+import { Livraison, StatutCommande, StatutLivraison } from '@prisma/client';
 
 export class LivraisonEntity {
   @ApiProperty()
@@ -26,7 +26,27 @@ export class LivraisonEntity {
   @ApiProperty()
   updatedAt: Date;
 
-  constructor(livraison: Livraison) {
+  /** Commande associée (adresse, client, véhicule) — incluse dans le détail. */
+  @ApiProperty({ nullable: true })
+  commande?: {
+    id: number;
+    adresseLivraison: string;
+    statut: StatutCommande;
+    client?: {
+      id: number;
+      nom: string;
+      email: string;
+      telephone: string | null;
+    } | null;
+    vehicule?: {
+      id: number;
+      marque: string;
+      modele: string;
+      imageUrl: string | null;
+    } | null;
+  } | null;
+
+  constructor(livraison: Livraison & { commande?: LivraisonEntity['commande'] }) {
     this.id = livraison.id;
     this.idCommande = livraison.idCommande;
     this.idLivreur = livraison.idLivreur;
@@ -35,5 +55,6 @@ export class LivraisonEntity {
     this.dateLivraison = livraison.dateLivraison;
     this.createdAt = livraison.createdAt;
     this.updatedAt = livraison.updatedAt;
+    this.commande = livraison.commande ?? null;
   }
 }
