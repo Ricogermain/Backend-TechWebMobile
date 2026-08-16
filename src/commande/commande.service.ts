@@ -100,6 +100,59 @@ export class CommandeService {
             throw new ForbiddenException("Vous ne pouvez modifier que votre propre commande");
         }
 
+        // Changement de véhicule : uniquement tant que la commande est EN_ATTENTE.
+        if (dto.idVehicule !== undefined && dto.idVehicule !== existe.idVehicule) {
+            if (existe.statut !== StatutCommande.EN_ATTENTE) {
+                throw new ForbiddenException(
+                    "Le véhicule ne peut être modifié que tant que la commande est en attente",
+                );
+            }
+
+            const nouveauVehicule = await this.db.vehicule.findUnique({
+                where: { id: dto.idVehicule },
+            });
+            if (!nouveauVehicule) {
+                throw new NotFoundException('Véhicule non trouvé');
+            }
+            if (!nouveauVehicule.disponible || nouveauVehicule.stock < 1) {
+                throw new BadRequestException('Véhicule indisponible ou en rupture de stock');
+            }
+
+            const updated = await this.db.$transaction(async (transaction) => {
+                // Restaure le stock de l'ancien véhicule.
+                const ancien = await transaction.vehicule.findUnique({
+                    where: { id: existe.idVehicule },
+                });
+                if (ancien) {
+                    const stockAncien = ancien.stock + 1;
+                    await transaction.vehicule.update({
+                        where: { id: ancien.id },
+                        data: {
+                            stock: stockAncien,
+                            disponible: stockAncien > 0,
+                        },
+                    });
+                }
+
+                // Décrémente le stock du nouveau véhicule.
+                const stockNouveau = nouveauVehicule.stock - 1;
+                await transaction.vehicule.update({
+                    where: { id: nouveauVehicule.id },
+                    data: {
+                        stock: stockNouveau,
+                        disponible: stockNouveau > 0,
+                    },
+                });
+
+                return transaction.commande.update({
+                    where: { id },
+                    data: { idVehicule: dto.idVehicule },
+                });
+            });
+
+            return new CommandeEntity(updated);
+        }
+
         const updated = await this.db.commande.update({
             where: { id },
             data: { adresseLivraison: dto.adresseLivraison },
