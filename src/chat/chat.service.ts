@@ -59,6 +59,78 @@ export class ChatService {
   }
 
   /**
+   * Nombre total de messages non lus pour l'utilisateur courant.
+   * - Client : messages non lus sur ses propres commandes.
+   * - Livreur : messages non lus sur les commandes dont il assure la livraison.
+   */
+  async getUnreadCount(user: CurrentUserPayload): Promise<number> {
+    const where = this.buildAccessibleCommandeWhere(user, { statut: { in: ['EN_LIVRAISON'] } });
+
+    const count = await this.db.message.count({
+      where: {
+        lu: false,
+        idExpediteur: { not: user.id },
+        commande: where,
+      },
+    });
+
+    return count;
+  }
+
+  /**
+   * Liste les commandes actives (en livraison) avec le dernier message
+   * et le nombre de non-lus, pour l'icône de chat dans l'AppBar.
+   */
+  async getActiveConversations(user: CurrentUserPayload) {
+    const where = this.buildAccessibleCommandeWhere(user, { statut: { in: ['EN_LIVRAISON'] } });
+
+    const commandes = await this.db.commande.findMany({
+      where,
+      include: {
+        livraison: {
+          select: {
+            idLivreur: true,
+            livreur: { select: { id: true, nom: true } },
+          },
+        },
+        client: {
+          select: { id: true, nom: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const result = await Promise.all(
+      commandes.map(async (cmd) => {
+        const [lastMessage, unreadCount] = await Promise.all([
+          this.db.message.findFirst({
+            where: { idCommande: cmd.id },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, contenu: true, idExpediteur: true, createdAt: true },
+          }),
+          this.db.message.count({
+            where: {
+              idCommande: cmd.id,
+              idExpediteur: { not: user.id },
+              lu: false,
+            },
+          }),
+        ]);
+
+        return {
+          idCommande: cmd.id,
+          client: cmd.client,
+          livreur: cmd.livraison?.livreur ?? null,
+          lastMessage,
+          unreadCount,
+        };
+      }),
+    );
+
+    return result;
+  }
+
+  /**
    * Marque tous les messages reçus d'une commande comme lus.
    */
   async markAsRead(
@@ -75,6 +147,25 @@ export class ChatService {
       },
       data: { lu: true },
     });
+  }
+
+  /**
+   * Construit le filtre Prisma pour les commandes accessibles par l'utilisateur.
+   */
+  private buildAccessibleCommandeWhere(
+    user: CurrentUserPayload,
+    extra?: any,
+  ): any {
+    let base: any = {};
+
+    if (user.role === Role.CLIENT) {
+      base = { idClient: user.id };
+    } else if (user.role === Role.LIVREUR) {
+      base = { livraison: { idLivreur: user.id } };
+    }
+    // ADMIN : pas de filtre
+
+    return { ...base, ...(extra ?? {}) };
   }
 
   /**
