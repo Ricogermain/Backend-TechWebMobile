@@ -15,8 +15,11 @@ model Utilisateur {
   role       Role        @default(CLIENT)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
-  commandes  Commande[]  @relation("ClientCommandes")
-  livraisons Livraison[] @relation("LivreurLivraisons")
+  commandes              Commande[]              @relation("ClientCommandes")
+  livraisons             Livraison[]             @relation("LivreurLivraisons")
+  conversationsAsUser1   Conversation[]          @relation("ConversationParticipant1")
+  conversationsAsUser2   Conversation[]          @relation("ConversationParticipant2")
+  messagesSent           Message[]               @relation("MessageSender")
 
   @@map("utilisateurs")
 }
@@ -66,6 +69,34 @@ model Livraison {
   livreur           Utilisateur?    @relation("LivreurLivraisons", fields: [idLivreur], references: [id])
 
   @@map("livraisons")
+}
+
+model Conversation {
+  id           Int       @id @default(autoincrement())
+  participant1 Int
+  participant2 Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user1        Utilisateur @relation("ConversationParticipant1", fields: [participant1], references: [id])
+  user2        Utilisateur @relation("ConversationParticipant2", fields: [participant2], references: [id])
+  messages     Message[]
+
+  @@unique([participant1, participant2])
+  @@map("conversations")
+}
+
+model Message {
+  id              Int          @id @default(autoincrement())
+  conversationId  Int
+  senderId        Int
+  contenu         String
+  lu              Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          Utilisateur  @relation("MessageSender", fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }
 
 enum Role {

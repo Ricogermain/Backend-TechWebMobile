@@ -10,6 +10,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { VehiculesModule } from './vehicules/vehicules.module';
 import { CommandeModule } from './commande/commande.module';
 import { LivraisonModule } from './livraison/livraison.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { LivraisonModule } from './livraison/livraison.module';
     VehiculesModule,
     CommandeModule,
     LivraisonModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [
