@@ -6,10 +6,10 @@ export class MessageEntity {
   id: number;
 
   @ApiProperty()
-  conversationId: number;
+  idCommande: number;
 
   @ApiProperty()
-  senderId: number;
+  idExpediteur: number;
 
   @ApiProperty()
   contenu: string;
@@ -22,8 +22,8 @@ export class MessageEntity {
 
   constructor(message: Message) {
     this.id = message.id;
-    this.conversationId = message.conversationId;
-    this.senderId = message.senderId;
+    this.idCommande = message.idCommande;
+    this.idExpediteur = message.idExpediteur;
     this.contenu = message.contenu;
     this.lu = message.lu;
     this.createdAt = message.createdAt;
