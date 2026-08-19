@@ -28,14 +28,18 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get('unread/count')
-  @ApiOperation({ summary: 'Nombre total de messages non lus pour l\'utilisateur courant' })
+  @ApiOperation({
+    summary: "Nombre total de messages non lus pour l'utilisateur courant",
+  })
   @ApiResponse({ status: 200, description: 'Nombre de non-lus' })
   getUnreadCount(@CurrentUser() user: CurrentUserPayload) {
     return this.chatService.getUnreadCount(user);
   }
 
   @Get('conversations')
-  @ApiOperation({ summary: 'Commandes actives (en livraison) avec dernier message et non-lus' })
+  @ApiOperation({
+    summary: 'Commandes actives (en livraison) avec dernier message et non-lus',
+  })
   @ApiResponse({ status: 200, description: 'Liste des conversations actives' })
   getActiveConversations(@CurrentUser() user: CurrentUserPayload) {
     return this.chatService.getActiveConversations(user);
